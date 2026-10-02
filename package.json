@@ -1,0 +1,8 @@
+{
+  "name": "test-dependabot-auto-merge",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "left-pad": "1.0.0"
+  }
+}

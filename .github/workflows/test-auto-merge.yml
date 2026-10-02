@@ -1,0 +1,41 @@
+name: Test Dependabot Auto-merge Token
+
+on:
+  pull_request_target:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  test-token:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show event context
+        run: |
+          echo "actor=${{ github.actor }}"
+          echo "pr_user_login=${{ github.event.pull_request.user.login }}"
+          echo "event_name=${{ github.event_name }}"
+
+      - name: Test write access (comment on PR)
+        id: comment-test
+        continue-on-error: true
+        run: gh pr comment "$PR_URL" --body "GITHUB_TOKEN write test (comment): $(date -u)"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Report comment test result
+        run: echo "comment-test outcome=${{ steps.comment-test.outcome }}"
+
+      - name: Test write access (enable auto-merge)
+        id: merge-test
+        continue-on-error: true
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Report merge test result
+        run: echo "merge-test outcome=${{ steps.merge-test.outcome }}"
