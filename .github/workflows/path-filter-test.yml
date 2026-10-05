@@ -3,8 +3,6 @@ name: Path Filter Test
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'frontend/**'
 
 jobs:
   frontend-lint:
