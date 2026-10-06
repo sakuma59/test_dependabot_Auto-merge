@@ -1,0 +1,52 @@
+name: Frontend CI (verify)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/verify-ci.yml'
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend-changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      frontend: ${{ steps.detect.outputs.frontend }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed paths
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # (検証用) 検知失敗を再現する
+          if [ -f .force-detect-fail ]; then echo "forced failure"; exit 1; fi
+          # push(develop)はworkflowのpathsで絞り込み済みのため常に実行する
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed_files=$(git -c core.quotepath=false diff --name-only "$BASE_SHA...$HEAD_SHA")
+          if grep -qE '^frontend/|^\.github/workflows/verify-ci\.yml$' <<< "$changed_files"; then
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "frontend=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  frontend-lint:
+    needs: frontend-changes
+    if: ${{ !cancelled() && (needs.frontend-changes.result != 'success' || needs.frontend-changes.outputs.frontend == 'true') }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "frontend-lint ran"
